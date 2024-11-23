@@ -2,23 +2,12 @@
 //  MakerUseCases.swift
 //  SnapFit
 //
-//  Created by 정선아 on 11/22/24.
-//
-
-
-//
-//  MakerUseCases.swift
-//  SnapFit
-//
-//  Created by 정정욱 on 8/21/24.
+//  Created by SnapFit on 11/22/24.
 //
 
 import Foundation
 
 enum MakerUseCases {
-    
- 
-    
     // 상품 리스트 조회
     enum LoadProducts {
    

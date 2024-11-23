@@ -2,15 +2,7 @@
 //  ProductBusinessLogic.swift
 //  SnapFit
 //
-//  Created by 정선아 on 11/22/24.
-//
-
-
-//
-//  ProductBusinessLogic.swift
-//  SnapFit
-//
-//  Created by 정정욱 on 8/15/24.
+//  Created by SnapFit on 11/22/24.
 //
 
 import Foundation

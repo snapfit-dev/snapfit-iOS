@@ -5,7 +5,6 @@
 //  Created by SnapFit on 8/14/24.
 //
 
-
 import Foundation
 import KakaoSDKAuth
 import KakaoSDKUser

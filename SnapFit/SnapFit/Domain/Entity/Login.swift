@@ -2,17 +2,9 @@
 //  Login.swift
 //  SnapFit
 //
-//  Created by 정선아 on 11/22/24.
+//  Created by SnapFit on 11/22/24.
 //
 
-
-//
-//  LoginModel.swift
-//  SnapFit
-//
-//  Created by 정정욱 on 7/14/24.
-//
-//
 import Foundation
 
 //use case 정의 - 로그인
