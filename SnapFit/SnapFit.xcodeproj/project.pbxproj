@@ -96,6 +96,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AE2124482CF0B33700522D79 /* Data */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Data; sourceTree = "<group>"; };
 		AE2124722CF0BA7800522D79 /* Entity */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Entity; sourceTree = "<group>"; };
+		AE6322E12CF1E42000F9AB1D /* Presentation */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Presentation; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -149,6 +150,7 @@
 				6496CB2C2C42CE3900381F0F /* App */,
 				AE2124482CF0B33700522D79 /* Data */,
 				AE2124712CF0BA6900522D79 /* Domain */,
+				AE6322E12CF1E42000F9AB1D /* Presentation */,
 				6428A4922C3D20C900C47990 /* Preview Content */,
 				644EDABB2C4552AA00745DDD /* Utils */,
 			);
@@ -264,6 +266,7 @@
 			fileSystemSynchronizedGroups = (
 				AE2124482CF0B33700522D79 /* Data */,
 				AE2124722CF0BA7800522D79 /* Entity */,
+				AE6322E12CF1E42000F9AB1D /* Presentation */,
 			);
 			name = SnapFit;
 			packageProductDependencies = (
