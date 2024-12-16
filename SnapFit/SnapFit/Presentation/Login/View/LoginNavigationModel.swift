@@ -1,18 +1,9 @@
 //
-//  LoginNavigationModel.swift
+//  TermsView.swift
 //  SnapFit
 //
-//  Created by 정선아 on 11/23/24.
+//  Created by SnapFit on 11/23/24.
 //
-
-
-//
-//  LoginNavigationModel.swift
-//  SnapFit
-//
-//  Created by 정정욱 on 8/13/24.
-//
-
 
 import SwiftUI
 

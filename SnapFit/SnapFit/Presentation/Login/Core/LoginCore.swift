@@ -1,14 +1,14 @@
 //
-//  LoginView.swift
+//  LoginCore.swift
 //  SnapFit
 //
-//  Created by SnapFit on 11/23/24.
+//  Created by 정선아 on 12/16/24.
 //
 
-import SwiftUI
-import _AuthenticationServices_SwiftUI
+import Foundation
 import ComposableArchitecture
 import Combine
+import _AuthenticationServices_SwiftUI
 
 @Reducer
 struct LoginCore {
@@ -31,6 +31,7 @@ struct LoginCore {
         var showLoginModal: Bool = true
         var model: Login.LoadLogin.LoginPresentationViewModel
         var navigationStack: LoginNavigationModel
+        var cancellables = Set<AnyCancellable>()
     }
 
     enum Action {
@@ -46,6 +47,8 @@ struct LoginCore {
         case presentSocialregisterSuccess(socialLoginType: String, accessToken: String, oauthToken: String?)
         case presentSocialregisterFailure(_ error: Error, socialLoginType: String, accessToken: String, oauthToken: String?)
         case display
+        case fetchVibes
+        case setNickname(nickname: String)
     }
 
     private let authWorker: AuthWorkingLogic
@@ -87,49 +90,49 @@ struct LoginCore {
                 return .none
 
             case .completeAppleLogin(result: let result):
-                authWorker.completeAppleLogin(result: result) { [weak self] result in
-                    switch result {
-                    case .success(let accessToken):
-                        self?.authWorker.socialLoginSnapfitServer(accessToken: accessToken, socialType : "apple")
-                            .sink(receiveCompletion: { completion in
-                                switch completion {
-                                case .failure(let error): // 실패시 애플에서 받은 엑세스 토큰을 저장
-                                    send(.presentSocialLoginFailure(error, socialLoginType: "apple", accessToken: accessToken))
-                                case .finished:
-                                    break
-                                }
-                            }, receiveValue: { tokens in
-                                // 1. 애플 로그인 성공시 스냅핏 토큰을 저장
-                                send(.saveTokens(tokens))
-                                send(.presentSocialLoginSuccess(socialLoginType: "apple", accessToken: accessToken, oauthToken: nil))
-                            })
-                            .store(in: &self!.cancellables)
+                return .run { send in
+                    authWorker.completeAppleLogin(result: result) { [weak self] result in
+                        switch result {
+                        case .success(let accessToken):
+                            self?.authWorker.socialLoginSnapfitServer(accessToken: accessToken, socialType : "apple")
+                                .sink(receiveCompletion: { completion in
+                                    switch completion {
+                                    case .failure(let error): // 실패시 애플에서 받은 엑세스 토큰을 저장
+                                        send(.presentSocialLoginFailure(error, socialLoginType: "apple", accessToken: accessToken))
+                                    case .finished:
+                                        break
+                                    }
+                                }, receiveValue: { tokens in
+                                    // 1. 애플 로그인 성공시 스냅핏 토큰을 저장
+                                    send(.saveTokens(tokens: tokens))
+                                    send(.presentSocialLoginSuccess(socialLoginType: "apple", accessToken: accessToken, oauthToken: nil))
+                                })
+                                .store(in: &state.cancellables)
 
-                    case .failure(let error):
-                        send(.presentSocialLoginFailure(error, socialLoginType: "apple", accessToken: "애플로그인 실패"))
+                        case .failure(let error):
+                            send(.presentSocialLoginFailure(error, socialLoginType: "apple", accessToken: "애플로그인 실패"))
+                        }
                     }
                 }
 
-                return .none
-
             case .registerUser(request: let request):
-                authWorker.registerUser(request: request)
-                            .sink(receiveCompletion: { completion in
-                                switch completion {
-                                case .failure(let error):
-                                    self.presenter?.presentSocialregisterFailure(error, socialLoginType: request.social, accessToken: request.socialAccessToken, oauthToken: nil)
-                                case .finished:
-                                    break
-                                }
-                            }, receiveValue: { tokens in
-                                self.saveTokens(tokens)
-                                // 옵셔널 값 처리: `accessToken`이 옵셔널이므로 `??`를 사용해 기본값을 제공
-                                let accessToken = tokens.accessToken ?? ""
-                                self.presenter?.presentSocialregisterSuccess(socialLoginType: request.social, accessToken: accessToken, oauthToken: nil)
-                            })
-                            .store(in: &cancellables)
-
-                return .none
+                return .run { send in
+                    authWorker.registerUser(request: request)
+                                .sink(receiveCompletion: { completion in
+                                    switch completion {
+                                    case .failure(let error):
+                                        send(.presentSocialregisterFailure(error, socialLoginType: request.social, accessToken: request.socialAccessToken, oauthToken: nil))
+                                    case .finished:
+                                        break
+                                    }
+                                }, receiveValue: { tokens in
+                                    send(.saveTokens(tokens: tokens))
+                                    // 옵셔널 값 처리: `accessToken`이 옵셔널이므로 `??`를 사용해 기본값을 제공
+                                    let accessToken = tokens.accessToken ?? ""
+                                    send(.presentSocialregisterSuccess(socialLoginType: request.social, accessToken: accessToken, oauthToken: nil))
+                                })
+                                .store(in: &state.cancellables)
+                }
 
             case .saveTokens(tokens: let tokens):
                 // 옵셔널 값 처리: `accessToken`과 `refreshToken`이 옵셔널이므로 기본값을 제공
@@ -232,171 +235,27 @@ struct LoginCore {
                         print("Unsupported social login type")
                     }
                 }
+
+
+            case .fetchVibes:
+                return .run { send in
+                    authWorker.fetchVibes()
+                        .sink(receiveCompletion: { completion in
+                            switch completion {
+                            case .failure(let error):
+                                print("Error fetching vibes: \(error)")
+                            case .finished:
+                                break
+                            }
+                        }, receiveValue: { vibes in
+                            state.vibes = vibes
+                        })
+                        .store(in: &state.cancellables)
+                }
+
+            case .setNickname(nickname: let nickname):
+                state.nickName = nickname
             }
         }
     }
 }
-
-// 로그인 화면을 정의하는 View
-struct LoginView: View {
-
-    @Binding var store: StoreOf<LoginCore>
-
-    var body: some View {
-        NavigationStack(path: store.state.navigationStack.navigationPath) {
-            GeometryReader { geometry in
-                ZStack {
-                    Image("LoginBack")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .ignoresSafeArea()
-
-                    VStack(alignment: .leading) {
-                        Spacer().frame(height: geometry.size.height * 0.14)
-
-                        Group {
-                            Image("appLogo")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 155, height: 63)
-                                .padding(.bottom, 24)
-
-                            Text("당신의 아름다운 순간을 담다.")
-                                .font(.callout)
-                                .foregroundColor(Color("LoginFontColor"))
-                        }
-                        .font(.title3)
-
-                        Spacer()
-
-                        LoginViewGroup(store: store)
-
-                        Spacer().frame(height: geometry.size.height * 0.03)
-                    }
-                    .padding(.horizontal, 16)
-                }
-                .padding(.horizontal, 16)
-                .frame(width: geometry.size.width, height: geometry.size.height)
-            }
-            .navigationDestination(for: String.self) { destination in
-                switch destination {
-                case "termsView":
-                    TermsView(navigationPath: navigationModel, viewModel: loginviewModel, interactor: interactor)
-                        .navigationBarBackButtonHidden(true)
-                case "NicknameSettingsView":
-                    NicknameSettingsView(navigationPath: navigationModel, viewModel: loginviewModel, interactor: interactor)
-                        .navigationBarBackButtonHidden(true)
-                case "GridSelectionView":
-                    GridSelectionView(columnsCount: 2, viewModel: loginviewModel, navigationPath: navigationModel, interactor: interactor)
-                        .navigationBarBackButtonHidden(true)
-                case "FreelookView":
-                    FreelookView() // FreelookView를 네비게이션 링크로 표시
-                        .navigationBarBackButtonHidden(true)
-                default:
-                    EmptyView()
-                }
-            }
-            .navigationBarBackButtonHidden(true)
-            .ignoresSafeArea()
-        }
-    }
-}
-
-
-// 로그인 버튼 및 로그인 관련 UI를 정의하는 구조체
-private struct LoginViewGroup: View {
-    @Binding var store: StoreOf<LoginCore>
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Image("LoginDscription")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 178, height: 12)
-                .overlay {
-                    HStack {
-                        Image("LoginDscriptionLogo")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 10, height: 10)
-
-                        Text("3초만에 빠른 로그인")
-                            .font(.caption)
-                            .foregroundColor(.black)
-                    }
-                    .offset(y: -7)
-                }
-
-            Button {
-                store.send(.loginWithKakao)
-            } label: {
-                HStack(spacing: 70) {
-                    Image("kakaoButton")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 20, height: 20)
-                        .padding(.leading)
-
-                    Text("카카오로 계속하기")
-                        .font(.system(size: 15))
-                        .bold()
-                        .foregroundColor(.black)
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color.yellow)
-            }
-            .frame(width: UIScreen.main.bounds.width * 0.9, height: 50)
-            .cornerRadius(10)
-
-            SignInWithAppleButton(
-                onRequest: { request in
-                    store.send(.loginWithApple(request: request))
-                },
-                onCompletion: { result in
-                    store.send(.completeAppleLogin(result: result))
-                }
-            )
-            .overlay {
-                HStack(spacing: 70) {
-                    Image("AppleButton")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24)
-                        .padding(.leading)
-
-                    Text("Apple로 계속하기")
-                        .font(.system(size: 15))
-                        .bold()
-                        .foregroundColor(.black)
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color.white)
-                .allowsHitTesting(false)
-            }
-            .frame(width: UIScreen.main.bounds.width * 0.9, height: 50)
-            .cornerRadius(10)
-
-            NavigationLink(value: "FreelookView") {
-                Text("둘러보기")
-                    .font(.system(size: 15))
-                    .foregroundColor(Color(white: 0.7))
-                    .underline()
-            }
-            .padding(.bottom, 20)
-        }
-    }
-}
-
-
-//struct LoginView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        LoginView(loginviewModel: LoginViewModel(), navigationModel: LoginNavigationModel())
-//            .environmentObject(LoginNavigationModel())  // Preview를 위한 네비게이션 모델 제공
-//    }
-//}
-

@@ -1,7 +1,8 @@
 import SwiftUI
+import ComposableArchitecture
 
 struct GridSelectionView: View {
-    
+    @Binding var store: StoreOf<LoginCore>
     @State private var isConfirmButtonEnabled = false
     @State private var selectedItems: Set<Int> = []
     @State private var showAlert = false
@@ -12,11 +13,7 @@ struct GridSelectionView: View {
     }
     
     @Environment(\.presentationMode) var presentationMode
-    @ObservedObject var viewModel: LoginViewModel
-    @ObservedObject var navigationPath: LoginNavigationModel
-    var interactor: LoginBusinessLogic?
 
-    
     var body: some View {
         VStack(alignment: .leading) {
             
@@ -39,25 +36,25 @@ struct GridSelectionView: View {
                     columns: columns,
                     alignment: .center,
                     spacing: 19) {
-                        ForEach(viewModel.vibes.indices, id: \.self) { index in
+                        ForEach(store.state.vibes.indices, id: \.self) { index in
                             Button {
                                 // Ensure index is within bounds of the viewModel.vibes array
-                                guard index >= 0 && index < viewModel.vibes.count else { return }
-                                
+                                guard index >= 0 && index < store.state.vibes.count else { return }
+
                                 if selectedItems.contains(index) {
                                     // Deselect the item
                                     selectedItems.remove(index)
-                                    if let name = viewModel.vibes[index].name {
+                                    if let name = store.state.vibes[index].name {
                                         DispatchQueue.main.async {
-                                            viewModel.moods.removeAll { $0 == name }
+                                            store.state.moods.removeAll { $0 == name }
                                         }
                                     }
                                 } else if selectedItems.count < 2 {
                                     // Select the item
                                     selectedItems.insert(index)
-                                    if let name = viewModel.vibes[index].name {
+                                    if let name = store.state.vibes[index].name {
                                         DispatchQueue.main.async {
-                                            viewModel.moods.append(name)
+                                            store.state.moods.append(name)
                                         }
                                     }
                                 } else {
@@ -69,7 +66,7 @@ struct GridSelectionView: View {
                                     isConfirmButtonEnabled = selectedItems.count > 0
                                 }
                             } label: {
-                                Text(viewModel.vibes[index].name ?? "")
+                                Text(store.state.vibes[index].name ?? "")
                                     .foregroundColor(selectedItems.contains(index) ? Color.white : Color.black)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 60)
@@ -89,18 +86,18 @@ struct GridSelectionView: View {
             Button {
                 // Action for "시작하기"
                 DispatchQueue.main.async {
-                    interactor?.registerUser(request: Login.LoadLogin.Request(
-                        social: viewModel.social,
-                        nickName: viewModel.nickName,
-                        isMarketing: viewModel.isMarketing,
-                        oauthToken: viewModel.oauthToken,
-                        socialAccessToken: viewModel.socialAccessToken,
-                        moods: viewModel.moods
-                    ))
-                    
+                    store.send(.registerUser(request: Login.LoadLogin.Request(
+                        social: store.state.social,
+                        nickName: store.state.nickName,
+                        isMarketing: store.state.isMarketing,
+                        oauthToken: store.state.oauthToken,
+                        socialAccessToken: store.state.socialAccessToken,
+                        moods: store.state.moods
+                    )))
+
                     // 로그인 성공 시 모달 닫기
                     //viewModel.membershipRequired = false
-                    viewModel.showLoginModal = false
+                    store.state.showLoginModal = false
                     //navigationPath.navigationPath = .init()
                 }
             } label: {
@@ -151,11 +148,11 @@ struct GridSelectionView: View {
                 
                 // Reset selected items and moods
                 selectedItems.removeAll()
-                viewModel.moods.removeAll()
-                
+                store.state.moods.removeAll()
+
                 // Fetch vibes again if necessary
-                interactor?.fetchVibes()
-                
+                store.send(.fetchVibes)
+
                 // Disable the confirm button initially
                 isConfirmButtonEnabled = false
             }
